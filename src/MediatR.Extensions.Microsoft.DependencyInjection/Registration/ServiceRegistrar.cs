@@ -33,24 +33,32 @@ public static class ServiceRegistrar
 
         foreach (var multiOpenInterface in multiOpenInterfaces)
         {
-            var arity = multiOpenInterface.GetGenericArguments().Length;
-
-            var concretions = assembliesToScan
-                .SelectMany(a => a.DefinedTypes)
-                .Where(type => type.FindInterfacesThatClose(multiOpenInterface).Any())
-                .Where(type => type.IsConcrete() && type.IsOpenGeneric())
-                .Where(type => type.GetGenericArguments().Length == arity)
-                .Where(configuration.TypeEvaluator)
-                .ToList();
-
-            foreach (var type in concretions)
-            {
-                services.AddTransient(multiOpenInterface, type);
-            }
+            ConnectMultiOpenInterfaceToTypesClosing(multiOpenInterface, services, assembliesToScan, configuration);
         }
     }
 
-    private static void ConnectImplementationsToTypesClosing(Type openRequestInterface,
+    public static void ConnectMultiOpenInterfaceToTypesClosing(Type multiOpenInterface, 
+        IServiceCollection services,
+        IEnumerable<Assembly> assembliesToScan,
+        MediatRServiceConfiguration configuration)
+    {
+        var arity = multiOpenInterface.GetGenericArguments().Length;
+
+        var concretions = assembliesToScan
+            .SelectMany(a => a.DefinedTypes)
+            .Where(type => type.FindInterfacesThatClose(multiOpenInterface).Any())
+            .Where(type => type.IsConcrete() && type.IsOpenGeneric())
+            .Where(type => type.GetGenericArguments().Length == arity)
+            .Where(configuration.TypeEvaluator)
+            .ToList();
+
+        foreach (var type in concretions)
+        {
+            services.AddTransient(multiOpenInterface, type);
+        }
+    }
+
+    public static void ConnectImplementationsToTypesClosing(Type openRequestInterface,
         IServiceCollection services,
         IEnumerable<Assembly> assembliesToScan,
         bool addIfAlreadyExists,
